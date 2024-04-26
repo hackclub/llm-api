@@ -19,16 +19,23 @@ def _hello_world():
 @app.post("/generate")
 async def _generate_response(req: Request):
     body = await req.json()
+
+    model_version = body.get("model")
+    messages = body.get("messages")
+
+    print(model_version)
+    print(messages)
+
     if body.get("model") == "chatgpt":
         model = ChatGPTAssistant(OPENAI_API_KEY)
     else:
         model = OllamaAssitantModel(
-            model=body.get("model"),
+            model=model_version,
         )
 
     response = {}
 
-    prompt_response = model.chat_completion(body.get("prompt"))
+    prompt_response = model.chat_completion(messages)
     code_blocks = model.get_code_blocks(prompt_response)
 
     response["raw"] = prompt_response

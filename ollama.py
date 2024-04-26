@@ -70,27 +70,13 @@ class LLMAssistant:
     def get_completion(self, messages) -> str:
         return ""
 
-    def chat_completion(self, query: str):
-        messages = self.chat_messages + [{"role": "user", "content": query}]
-
+    def chat_completion(self, messages: List):
         completion = self.get_completion(messages)
 
-        # TODO: find a better way of doing this
-        # this is naught 😛
         if "gpt" in self.model_version:
             # print("completion", completion)
             completion = completion.choices.pop().message.content
 
-        # add the user query and assitant completion to the history
-        self.chat_messages += [
-            {"role": "user", "content": query},
-            {"role": "assistant", "content": completion},
-        ]
-
-        # the chat messages history will only be mutated if the chat completion succeeds
-        # self.chat_messages = messages
-
-        # return the assitant completion to the user if they want to use it for anything whatsoever
         return completion
 
 
