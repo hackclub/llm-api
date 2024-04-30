@@ -2,23 +2,28 @@ from openai import OpenAI
 import requests
 from typing import List
 import json
+import redis
+import pickle
 
 class LLMAssistant:
-    def __init__(self, system_prompt: str | None = None):
+    def __init__(self, session_id: str, redis_pool: redis.ConnectionPool):
         self.sprig_docs = self.load_sprig_docs()
         self.model_version = "gpt-3.5-turbo"
-        self.chat_messages = [
-            {
-                "role": "system",
-                "content": system_prompt
-                if system_prompt is not None
-                else "You are an expert programmer that helps to write Python code based on the user request, with concise explanations. Don't be too verbose.",
-            },
-            {
-                "role": "user",
-                "content": "Here is the sprig documentation" + "\n\n" + self.sprig_docs,
-            },
-        ]
+        self.session_id = session_id
+        self.redis_connection = redis.Redis(connection_pool=redis_pool)
+        
+        # create a new system prompt and messages iff the session passed does not exist yet
+        # this to avoid overriding the messages in an existing session
+        if (self.redis_connection.get(self.session_id) is None):
+            # system prompt
+            chat_messages = [
+                {
+                    "role": "system",
+                    "content": "Here is the sprig documentation" + "\n\n" + self.sprig_docs + "\n\n With the help of the documentation, you have become an expert in JavaScript and understand Sprig. With the help of this documentation, answer prompts in a concise way.",
+                },
+            ]
+            # add the initial message items to the sprig doc
+            self.redis_connection.set("session_id", pickle.dumps(chat_messages))
 
     @staticmethod
     def build_code_prompt(self, code: str, error_logs: str = ""):
@@ -70,19 +75,37 @@ class LLMAssistant:
     def get_completion(self, messages) -> str:
         return ""
 
-    def chat_completion(self, messages: List):
-        completion = self.get_completion(messages)
+    def chat_completion(self, message: str):
+        messages_raw = self.redis_connection.get(self.session_id)
+        messages = pickle.loads(messages_raw)
+
+        completion = self.get_completion(messages + [{
+            "role": "user",
+            "content": message
+        }])
 
         if "gpt" in self.model_version:
-            # print("completion", completion)
             completion = completion.choices.pop().message.content
+
+        messages += [
+            {
+                "role": "user",
+                "content": message
+            },
+            {
+                "role": "assistant",
+                "content": completion
+            }
+        ]
+
+        self.redis_connection.set(self.session_id, pickle.dumps(messages))
 
         return completion
 
 
 class ChatGPTAssistant(LLMAssistant):
-    def __init__(self, openai_api_key: str, model: str = "gpt-3.5-turbo"):
-        super().__init__()
+    def __init__(self, session_id: str, redis_pool: redis.ConnectionPool, openai_api_key: str, model: str = "gpt-3.5-turbo"):
+        super().__init__(session_id=session_id, redis_pool=redis_pool)
         self.openai_client = OpenAI(api_key=openai_api_key)
         self.model_version = model
 
@@ -96,11 +119,12 @@ class ChatGPTAssistant(LLMAssistant):
 class OllamaAssitantModel(LLMAssistant):
     def __init__(
         self,
+        session_id: str, redis_pool: redis.ConnectionPool,
         model: str = "llama2",
         ctx_window: int = 4096,
         OLLAMA_SERVE_URL: str = "http://127.0.0.1:11434",
     ):
-        super().__init__()
+        super().__init__(session_id=session_id, redis_pool=redis_pool)
         self.generate_endpoint = f"{OLLAMA_SERVE_URL}/api/generate"
         self.chat_endpoint = f"{OLLAMA_SERVE_URL}/api/chat"
         self.model_version = model
