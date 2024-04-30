@@ -9,9 +9,12 @@ import os
 load_dotenv()
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
+REDIS_HOST = os.environ["REDIS_HOST"]
+REDIS_PORT = os.environ["REDIS_PORT"]
+REDIS_DB_NUMBER = os.environ["REDIS_DB_NUMBER"]
 
 app = FastAPI()
-redis_pool = redis.ConnectionPool(host="localhost", port=6060, db=0)
+redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB_NUMBER)
 
 app.add_middleware(
     CORSMiddleware,
