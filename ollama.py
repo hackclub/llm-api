@@ -23,7 +23,7 @@ class LLMAssistant:
                 },
             ]
             # add the initial message items to the sprig doc
-            self.redis_connection.set("session_id", pickle.dumps(chat_messages))
+            self.redis_connection.set(self.session_id, pickle.dumps(chat_messages))
 
     @staticmethod
     def build_code_prompt(self, code: str, error_logs: str = ""):
