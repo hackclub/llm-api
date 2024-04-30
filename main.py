@@ -11,7 +11,7 @@ load_dotenv()
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 
 app = FastAPI()
-redis_pool = redis.ConectionPool(host="localhost", port=6060, db=0)
+redis_pool = redis.ConnectionPool(host="localhost", port=6060, db=0)
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,8 +41,6 @@ async def _generate_response(req: Request):
 
     message = body.get("message")
 
-    messages = body.get("messages")
-
     # print(model_version)
     # print(messages)
 
@@ -57,7 +55,7 @@ async def _generate_response(req: Request):
 
     response = {}
 
-    prompt_response = model.chat_completion(messages)
+    prompt_response = model.chat_completion(message)
     code_blocks = model.get_code_blocks(prompt_response)
 
     response["raw"] = prompt_response
