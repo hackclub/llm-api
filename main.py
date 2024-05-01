@@ -40,22 +40,9 @@ async def _generate_response(req: Request):
     body = await req.json()
 
     session_id = body.get("session_id")
-    model_version = body.get("model")
-
     message = body.get("message")
 
-    # print(model_version)
-    # print(messages)
-
-    if body.get("model") == "chatgpt":
-        model = ChatGPTAssistant(session_id=session_id, redis_pool=redis_pool, openai_api_key=OPENAI_API_KEY)
-    else:
-        model = OllamaAssitantModel(
-            session_id=session_id,
-            redis_pool=redis_pool,
-            model=model_version,
-        )
-
+    model = ChatGPTAssistant(session_id=session_id, redis_pool=redis_pool, openai_api_key=OPENAI_API_KEY)
     response = {}
 
     prompt_response = model.chat_completion(message)
