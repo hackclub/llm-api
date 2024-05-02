@@ -11,7 +11,6 @@ load_dotenv()
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 PG_DATABASE_URL = os.environ["PG_DATABASE_URL"]
-SPRIG_LLMAPI_SALT = os.environ["SPRIG_LLMAPI_SALT"]
 
 app = FastAPI()
 pg_engine = create_engine(PG_DATABASE_URL)
