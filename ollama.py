@@ -148,7 +148,7 @@ class LLMAssistant:
 
 class ChatGPTAssistant(LLMAssistant):
     def __init__(self, metrics: statsd.StatsClient, user_email: str, session_id: str, pg_engine, openai_api_key: str, model: str = "gpt-3.5-turbo"):
-        super().__init__(user_email=user_email, session_id=session_id, pg_engine=pg_engine)
+        super().__init__(metrics=metrics, user_email=user_email, session_id=session_id, pg_engine=pg_engine)
         self.openai_client = OpenAI(api_key=openai_api_key)
         self.model_version = model
 
