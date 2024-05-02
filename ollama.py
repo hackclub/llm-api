@@ -235,7 +235,6 @@ class OllamaAssitantModel(LLMAssistant):
                 "completion_tokens": response_summary.get("prompt_eval_count"),
                 "total_tokens": response_summary.get("eval_count") + response_summary.get("prompt_eval_count")
             }
-
             response_bulk = [
                 json.loads(response_str).get("message").get("content")
                 for response_str in responses.splitlines()
