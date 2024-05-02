@@ -18,8 +18,13 @@ class LLMAssistant:
 
         with Session(self.pg_engine) as session:
             chat_session = session.exec(select(ChatSession).where(ChatSession.id == self.session_id)).first()
-            # create new chat session if it does not exist yet
+
             if chat_session is None:
+                # create a new chat session as it does not exist yet
+                chat_session = ChatSession(
+                    id=self.session_id,
+                    user_email="something",
+                )
                 # create a new system prompt and messages iff the session passed does not exist yet
                 chat_record = ChatRecord(
                     session_id=self.session_id,
@@ -27,6 +32,7 @@ class LLMAssistant:
                     content="Here is the sprig documentation" + "\n\n" + self.sprig_docs + "\n\n With the help of the documentation, you have become an expert in JavaScript and understand Sprig. With the help of this documentation, answer prompts in a concise way.",
                     timestamp=get_time_millis()
                 )
+                session.add(chat_session)
                 session.add(chat_record)
                 session.commit()
 
