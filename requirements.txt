@@ -1,0 +1,7 @@
+fastapi
+openai
+python-dotenv
+uvicorn
+requests
+sqlmodel
+psycopg2
