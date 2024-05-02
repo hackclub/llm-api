@@ -129,7 +129,6 @@ class LLMAssistant:
                     content=message.get("content", ""),
                     timestamp=get_time_millis()
                 )
-                print("about to save new record", new_record)
                 session.add(new_record)
                 session.commit()
 
@@ -193,7 +192,6 @@ class OllamaAssitantModel(LLMAssistant):
         responses = requests.post(self.chat_endpoint, data=json.dumps(body)).content
         responses = responses.decode("utf-8")
 
-        # print(responses)
         response_bulk = [
             json.loads(response_str).get("message").get("content")
             for response_str in responses.splitlines()
