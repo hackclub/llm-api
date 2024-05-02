@@ -60,3 +60,16 @@ async def _generate_response(req: Request):
     response["codes"] = code_blocks
 
     return response | { "success": True }
+
+@app.post("/end-session")
+async def _end_chat_session(req: Request):
+    body = await req.json()
+
+    session_id = body.get("session_id")
+    with Session(pg_engine) as session:
+        chat_session = session.exec(select(ChatSession).where(ChatSession.id == session_id)).first()
+        chat_session.has_ended = True
+
+        session.add(chat_session)
+        session.commit()
+    return { "success": True }
