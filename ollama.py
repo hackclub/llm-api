@@ -103,8 +103,7 @@ class LLMAssistant:
             "content": message
         }])
 
-        if "gpt" in self.model_version:
-            completion = completion.choices.pop().message.content
+        completion_message = completion.get("message")
 
         new_messages = [
             {
@@ -113,14 +112,14 @@ class LLMAssistant:
             },
             {
                 "role": "assistant",
-                "content": completion
+                "content": completion_message
             }
         ]
 
         # add the newest messages as record into the database
         self.save_messages(new_messages)
 
-        return completion
+        return completion_message
     
     def load_previous_messages(self):
         messages = []
@@ -146,8 +145,6 @@ class LLMAssistant:
                 )
                 session.add(new_record)
                 session.commit()
-
-
 
 class ChatGPTAssistant(LLMAssistant):
     def __init__(self, metrics: statsd.StatsClient, user_email: str, session_id: str, pg_engine, openai_api_key: str, model: str = "gpt-3.5-turbo"):
