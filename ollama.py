@@ -3,27 +3,33 @@ import requests
 from typing import List
 import json
 import redis
-import pickle
+import time
+from sqlmodel import Session, select
+from models import ChatSession, ChatRecord
+
+def get_time_millis():
+    return round(time.time() * 1000)
 
 class LLMAssistant:
-    def __init__(self, session_id: str, redis_pool: redis.ConnectionPool):
+    def __init__(self, session_id: str, pg_engine):
         self.sprig_docs = self.load_sprig_docs()
         self.model_version = "gpt-3.5-turbo"
         self.session_id = session_id
-        self.redis_connection = redis.Redis(connection_pool=redis_pool)
-        
-        # create a new system prompt and messages iff the session passed does not exist yet
-        # this to avoid overriding the messages in an existing session
-        if (self.redis_connection.get(self.session_id) is None):
-            # system prompt
-            chat_messages = [
-                {
-                    "role": "system",
-                    "content": "Here is the sprig documentation" + "\n\n" + self.sprig_docs + "\n\n With the help of the documentation, you have become an expert in JavaScript and understand Sprig. With the help of this documentation, answer prompts in a concise way.",
-                },
-            ]
-            # add the initial message items to the sprig doc
-            self.redis_connection.set(self.session_id, pickle.dumps(chat_messages))
+        self.pg_engine = pg_engine
+
+        with Session(self.pg_engine) as session:
+            chat_session = session.exec(select(ChatSession).where(ChatSession.id == self.session_id)).first()
+            # create new chat session if it does not exist yet
+            if chat_session is None:
+                # create a new system prompt and messages iff the session passed does not exist yet
+                chat_record = ChatRecord(
+                    session_id=self.session_id,
+                    role="system",
+                    content="Here is the sprig documentation" + "\n\n" + self.sprig_docs + "\n\n With the help of the documentation, you have become an expert in JavaScript and understand Sprig. With the help of this documentation, answer prompts in a concise way.",
+                    timestamp=get_time_millis()
+                )
+                session.add(chat_record)
+                session.commit()
 
     @staticmethod
     def build_code_prompt(self, code: str, error_logs: str = ""):
@@ -76,8 +82,7 @@ class LLMAssistant:
         return ""
 
     def chat_completion(self, message: str):
-        messages_raw = self.redis_connection.get(self.session_id)
-        messages = pickle.loads(messages_raw)
+        messages = self.load_previous_messages() 
 
         completion = self.get_completion(messages + [{
             "role": "user",
@@ -87,7 +92,7 @@ class LLMAssistant:
         if "gpt" in self.model_version:
             completion = completion.choices.pop().message.content
 
-        messages += [
+        new_messages = [
             {
                 "role": "user",
                 "content": message
@@ -98,19 +103,46 @@ class LLMAssistant:
             }
         ]
 
-        self.redis_connection.set(self.session_id, pickle.dumps(messages))
+        # add the newest messages as record into the database
+        self.save_messages(new_messages)
 
         return completion
+    
+    def load_previous_messages(self):
+        messages = []
+        with Session(self.pg_engine) as session:
+            chat_records = session.exec(
+                select(ChatRecord).where(ChatRecord.session_id == self.session_id).order_by(ChatRecord.timestamp)
+            ).all()
+        for chat_record in chat_records:
+            messages.append({
+                "role": chat_record.role,
+                "content": chat_record.content
+            })
+        return messages
+
+    def save_messages(self, messages: List):
+        with Session(self.pg_engine) as session:
+            for message in messages:
+                new_record = ChatRecord(
+                    session_id=self.session_id,
+                    role=message.get("role", "user"),
+                    content=message.get("content", ""),
+                    timestamp=get_time_millis()
+                )
+                print("about to save new record", new_record)
+                session.add(new_record)
+                session.commit()
+
 
 
 class ChatGPTAssistant(LLMAssistant):
-    def __init__(self, session_id: str, redis_pool: redis.ConnectionPool, openai_api_key: str, model: str = "gpt-3.5-turbo"):
-        super().__init__(session_id=session_id, redis_pool=redis_pool)
+    def __init__(self, session_id: str, pg_engine: redis.ConnectionPool, openai_api_key: str, model: str = "gpt-3.5-turbo"):
+        super().__init__(session_id=session_id, pg_engine=pg_engine)
         self.openai_client = OpenAI(api_key=openai_api_key)
         self.model_version = model
 
     def get_completion(self, messages):
-        # print("open ai client", self.openai_client)
         return self.openai_client.chat.completions.create(
             model=self.model_version, messages=messages
         )
@@ -119,12 +151,12 @@ class ChatGPTAssistant(LLMAssistant):
 class OllamaAssitantModel(LLMAssistant):
     def __init__(
         self,
-        session_id: str, redis_pool: redis.ConnectionPool,
+        session_id: str, pg_engine,
         model: str = "llama2",
         ctx_window: int = 4096,
         OLLAMA_SERVE_URL: str = "http://127.0.0.1:11434",
     ):
-        super().__init__(session_id=session_id, redis_pool=redis_pool)
+        super().__init__(session_id=session_id, pg_engine=pg_engine)
         self.generate_endpoint = f"{OLLAMA_SERVE_URL}/api/generate"
         self.chat_endpoint = f"{OLLAMA_SERVE_URL}/api/chat"
         self.model_version = model
