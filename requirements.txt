@@ -3,4 +3,6 @@ openai
 python-dotenv
 uvicorn
 requests
-redis
+sqlmodel
+psycopg2
+python-jose[cryptography]
