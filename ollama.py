@@ -10,7 +10,8 @@ def get_time_millis():
     return round(time.time() * 1000)
 
 class LLMAssistant:
-    def __init__(self, session_id: str, pg_engine):
+    def __init__(self, user_email: str, session_id: str, pg_engine):
+        self.user_email = user_email
         self.sprig_docs = self.load_sprig_docs()
         self.model_version = "gpt-3.5-turbo"
         self.session_id = session_id
@@ -23,7 +24,7 @@ class LLMAssistant:
                 # create a new chat session as it does not exist yet
                 chat_session = ChatSession(
                     id=self.session_id,
-                    user_email="something",
+                    user_email=self.user_email,
                 )
                 # create a new system prompt and messages iff the session passed does not exist yet
                 chat_record = ChatRecord(
@@ -141,8 +142,8 @@ class LLMAssistant:
 
 
 class ChatGPTAssistant(LLMAssistant):
-    def __init__(self, session_id: str, pg_engine, openai_api_key: str, model: str = "gpt-3.5-turbo"):
-        super().__init__(session_id=session_id, pg_engine=pg_engine)
+    def __init__(self, user_email: str, session_id: str, pg_engine, openai_api_key: str, model: str = "gpt-3.5-turbo"):
+        super().__init__(user_email=user_email, session_id=session_id, pg_engine=pg_engine)
         self.openai_client = OpenAI(api_key=openai_api_key)
         self.model_version = model
 
@@ -155,12 +156,13 @@ class ChatGPTAssistant(LLMAssistant):
 class OllamaAssitantModel(LLMAssistant):
     def __init__(
         self,
+        user_email: str,
         session_id: str, pg_engine,
         model: str = "llama2",
         ctx_window: int = 4096,
         OLLAMA_SERVE_URL: str = "http://127.0.0.1:11434",
     ):
-        super().__init__(session_id=session_id, pg_engine=pg_engine)
+        super().__init__(user_email=user_email, session_id=session_id, pg_engine=pg_engine)
         self.generate_endpoint = f"{OLLAMA_SERVE_URL}/api/generate"
         self.chat_endpoint = f"{OLLAMA_SERVE_URL}/api/chat"
         self.model_version = model
