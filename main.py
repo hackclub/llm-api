@@ -5,15 +5,20 @@ from ollama import ChatGPTAssistant, get_time_millis
 from models import ChatSession
 from dotenv import load_dotenv
 from sqlmodel import create_engine, SQLModel, Session, select
+import statsd
 import os
+import time
 
 load_dotenv()
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
 PG_DATABASE_URL = os.environ["PG_DATABASE_URL"]
+GRAPHITE_HOST = os.environ["GRAPHITE_HOST"]
+GRAPHITE_HOST_PORT = os.environ["GRAPHITE_HOST_PORT"]
 
 app = FastAPI()
 pg_engine = create_engine(PG_DATABASE_URL)
+metrics = statsd.StatsClient(host=GRAPHITE_HOST, port=GRAPHITE_HOST_PORT, prefix="production.llmapi")
 
 # create all tables
 SQLModel.metadata.create_all(pg_engine)
@@ -39,6 +44,10 @@ def _hello_world():
 
 @app.post("/generate")
 async def _generate_response(req: Request):
+    metrics.incr("generate")
+
+    # time it starts handing a request
+    start_time = time.time()
     body = await req.json()
 
     user_email = body.get("email")
@@ -51,7 +60,7 @@ async def _generate_response(req: Request):
     if chat_session is not None and chat_session.has_ended:
         return { "success": False, "msg": "Session has ended" }
 
-    model = ChatGPTAssistant(user_email=user_email, session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
+    model = ChatGPTAssistant(metrics=metrics, user_email=user_email, session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
     response = {}
 
     prompt_response = model.chat_completion(message)
@@ -59,6 +68,11 @@ async def _generate_response(req: Request):
 
     response["raw"] = prompt_response
     response["codes"] = code_blocks
+
+    total_time = time.time() - start_time
+
+    # log time it took to handle request
+    metrics.timing("generate_response.timed", total_time)
 
     return response | { "success": True }
 
@@ -74,3 +88,4 @@ async def _end_chat_session(req: Request):
         session.add(chat_session)
         session.commit()
     return { "success": True }
+   
