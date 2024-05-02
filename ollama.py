@@ -2,7 +2,6 @@ from openai import OpenAI
 import requests
 from typing import List
 import json
-import redis
 import time
 from sqlmodel import Session, select
 from models import ChatSession, ChatRecord
@@ -137,7 +136,7 @@ class LLMAssistant:
 
 
 class ChatGPTAssistant(LLMAssistant):
-    def __init__(self, session_id: str, pg_engine: redis.ConnectionPool, openai_api_key: str, model: str = "gpt-3.5-turbo"):
+    def __init__(self, session_id: str, pg_engine, openai_api_key: str, model: str = "gpt-3.5-turbo"):
         super().__init__(session_id=session_id, pg_engine=pg_engine)
         self.openai_client = OpenAI(api_key=openai_api_key)
         self.model_version = model

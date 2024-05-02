@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
-import redis
 from ollama import ChatGPTAssistant
 from models import ChatSession
 from dotenv import load_dotenv
@@ -11,13 +10,9 @@ import os
 load_dotenv()
 
 OPENAI_API_KEY = os.environ["OPENAI_API_KEY"]
-REDIS_HOST = os.environ["REDIS_HOST"]
-REDIS_PORT = os.environ["REDIS_PORT"]
-REDIS_DB_NUMBER = os.environ["REDIS_DB_NUMBER"]
 PG_DATABASE_URL = os.environ["PG_DATABASE_URL"]
 
 app = FastAPI()
-redis_pool = redis.ConnectionPool(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB_NUMBER)
 pg_engine = create_engine(PG_DATABASE_URL)
 
 # create all tables
