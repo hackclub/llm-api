@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from ollama import ChatGPTAssistant
 from models import ChatSession
 from dotenv import load_dotenv
-from sqlmodel import create_engine, SQLModel
+from sqlmodel import create_engine, SQLModel, Session, select
 import os
 
 load_dotenv()
@@ -44,7 +44,12 @@ async def _generate_response(req: Request):
     session_id = body.get("session_id")
     message = body.get("message")
 
-    ChatSession(id=session_id)
+    with Session(pg_engine) as session:
+        chat_session = session.exec(select(ChatSession).where(ChatSession.id == session_id)).first()
+
+    if chat_session is not None and chat_session.has_ended:
+        return { "success": False, "msg": "Session has ended" }
+
     model = ChatGPTAssistant(session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
     response = {}
 
@@ -54,4 +59,4 @@ async def _generate_response(req: Request):
     response["raw"] = prompt_response
     response["codes"] = code_blocks
 
-    return response
+    return response | { "success": True }
