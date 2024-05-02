@@ -161,10 +161,18 @@ class ChatGPTAssistant(LLMAssistant):
             response = self.openai_client.chat.completions.create(
                 model=self.model_version, messages=messages
             )
+
+            result = { 
+                "message": response.choices.pop().message.content,
+                "prompt_tokens": response.usage.prompt_tokens, 
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens
+            }
+
             self.metrics.incr("success.generate_response")
-            return response
+            return result
         except:
-            self.metrics.incr("errors.generate_response")
+            self.metrics.incr("errors.generate_response") 
 
 
 class OllamaAssitantModel(LLMAssistant):
@@ -216,13 +224,25 @@ class OllamaAssitantModel(LLMAssistant):
                 "num_ctx": self.ctx_window,
             },
         }
-        responses = requests.post(self.chat_endpoint, data=json.dumps(body)).content
-        responses = responses.decode("utf-8")
+        try:
+            responses = requests.post(self.chat_endpoint, data=json.dumps(body)).content
+            responses = responses.decode("utf-8")
 
-        response_bulk = [
-            json.loads(response_str).get("message").get("content")
-            for response_str in responses.splitlines()
-        ]
-        response_bulk = "".join(response_bulk)
+            # the last item in a ollama response is the response summary including token count, duration etc
+            response_summary = json.loads(responses[-1])
+            token_counts = { 
+                "prompt_tokens": response_summary.get("eval_count"),
+                "completion_tokens": response_summary.get("prompt_eval_count"),
+                "total_tokens": response_summary.get("eval_count") + response_summary.get("prompt_eval_count")
+            }
 
-        return response_bulk
+            response_bulk = [
+                json.loads(response_str).get("message").get("content")
+                for response_str in responses.splitlines()
+            ]
+            response_bulk = "".join(response_bulk)
+
+            self.metrics.incr("success.generate_response")
+            return { "message": response_bulk } | token_counts
+        except:
+            self.metrics.incr("errors.generate_response")

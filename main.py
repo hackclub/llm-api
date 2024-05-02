@@ -60,7 +60,7 @@ async def _generate_response(req: Request):
     if chat_session is not None and chat_session.has_ended:
         return { "success": False, "msg": "Session has ended" }
 
-    model = ChatGPTAssistant(user_email=user_email, session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
+    model = ChatGPTAssistant(metrics=metrics, user_email=user_email, session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
     response = {}
 
     prompt_response = model.chat_completion(message)
