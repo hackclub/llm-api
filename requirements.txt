@@ -5,4 +5,3 @@ uvicorn
 requests
 sqlmodel
 psycopg2
-python-jose[cryptography]

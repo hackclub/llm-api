@@ -5,7 +5,6 @@ from ollama import ChatGPTAssistant, get_time_millis
 from models import ChatSession
 from dotenv import load_dotenv
 from sqlmodel import create_engine, SQLModel, Session, select
-from jose import jwt
 import os
 
 load_dotenv()
@@ -35,25 +34,15 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-def create_token(email: str) -> str:
-    return jwt.encode({
-        "email": email,
-        "iat": get_time_millis(),
-    }, key=SPRIG_LLMAPI_SALT)
-
-def decode_token(token: str) -> any:
-    return jwt.decode(token, SPRIG_LLMAPI_SALT)
-
 @app.get("/")
 def _hello_world():
     return "Hello World"
 
 @app.post("/generate")
 async def _generate_response(req: Request):
-    id_token = req.headers.get("Authorization")
     body = await req.json()
 
-    user_email = decode_token(id_token).get("email")
+    user_email = body.get("email")
     session_id = body.get("session_id")
     message = body.get("message")
 
