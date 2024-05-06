@@ -74,7 +74,7 @@ async def _generate_response(req: Request):
     # log time it took to handle request
     metrics.timing("generate_response.timed", total_time)
 
-    return response | { "success": True }
+    return response.update({ "success": True })
 
 @app.post("/end-session")
 async def _end_chat_session(req: Request):
