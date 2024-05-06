@@ -74,7 +74,7 @@ async def _generate_response(req: Request):
     # log time it took to handle request
     metrics.timing("generate_response.timed", total_time)
 
-    return response | { "success": True }
+    return response.update({ "success": True })
 
 @app.post("/end-session")
 async def _end_chat_session(req: Request):
@@ -83,9 +83,10 @@ async def _end_chat_session(req: Request):
     session_id = body.get("session_id")
     with Session(pg_engine) as session:
         chat_session = session.exec(select(ChatSession).where(ChatSession.id == session_id)).first()
-        chat_session.has_ended = True
+        if chat_session is not None:
+            chat_session.has_ended = True
 
-        session.add(chat_session)
-        session.commit()
+            session.add(chat_session)
+            session.commit()
     return { "success": True }
    
