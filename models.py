@@ -8,6 +8,7 @@ class ChatSession(SQLModel, table=True):
 
 class ChatRecord(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    model: Optional[str] = Field(default=None)
     content: str
     role: str # user | system | assistant 
     session_id: str 

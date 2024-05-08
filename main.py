@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
-from ollama import ChatGPTAssistant, get_time_millis
+from ollama import ChatGPTAssistant
 from models import ChatSession
 from dotenv import load_dotenv
 from sqlmodel import create_engine, SQLModel, Session, select
