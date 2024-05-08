@@ -41,4 +41,19 @@ uvicorn main:app --reload
 If you don't get any errors, the app should be running properly.
 
 ## CORS 
-By default, localhost:3000
+By default, `localhost:3000` is an authorized origin in teh LLM API
+
+If you want to allow a URL authorized, add the URL to `allow_origins` in the CORS middleware
+```
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "https://sprig.hackclub.com",
+        "http://localhost:3000",
+        "https://sprig-git-sprig-ai.hackclub.dev",
+        "https://sprig.hackclub.com",
+        "https://your-new-url.com"
+    ],
+```
+
+If you've got questions or would like to learn more, please visit [#hq-engineering](https://hackclub.slack.com/archives/C05SVRTCDGV) on Hack Club's slack.
