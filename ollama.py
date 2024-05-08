@@ -32,6 +32,7 @@ class LLMAssistant:
                 # create a new system prompt and messages iff the session passed does not exist yet
                 chat_record = ChatRecord(
                     session_id=self.session_id,
+                    model=self.model_version,
                     role="system",
                     content="Here is the sprig documentation" + "\n\n" + self.sprig_docs + "\n\n With the help of the documentation, you have become an expert in JavaScript and understand Sprig. With the help of this documentation, answer prompts in a concise way.",
                     timestamp=get_time_millis()
@@ -139,6 +140,7 @@ class LLMAssistant:
             for message in messages:
                 new_record = ChatRecord(
                     session_id=self.session_id,
+                    model=self.model_version,
                     role=message.get("role", "user"),
                     content=message.get("content", ""),
                     timestamp=get_time_millis()
