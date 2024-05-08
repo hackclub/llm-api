@@ -40,6 +40,21 @@ uvicorn main:app --reload
 
 If you don't get any errors, the app should be running properly.
 
+## Making API requests
+
+An API requests looks like
+```
+{
+    message: ,
+    session_id: ,
+    email: ,
+}
+```
+
+The API will return a reponse containing the raw output from the model and a property called `codes` containing the list of code blocks the API extracted from the model response.
+
+By default, the API keeps a history of the requests sent to it so you don't have to worry about sending a list of the previous messages.
+
 ## CORS 
 By default, `localhost:3000` is an authorized origin in teh LLM API
 
