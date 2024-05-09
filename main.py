@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
-from ollama import ChatGPTAssistant
+from ollama import ChatGPTAssistant, SessionLimitExceeded
 from models import ChatSession
 from dotenv import load_dotenv
-from sqlmodel import create_engine, SQLModel, Session, select
+from sqlmodel import create_engine, SQLModel, Session, select, and_
 import statsd
 import os
 import time
@@ -60,7 +60,10 @@ async def _generate_response(req: Request):
     if chat_session is not None and chat_session.has_ended:
         return { "success": False, "msg": "Session has ended" }
 
-    model = ChatGPTAssistant(metrics=metrics, user_email=user_email, session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
+    try:
+        model = ChatGPTAssistant(metrics=metrics, user_email=user_email, session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
+    except SessionLimitExceeded:
+        return { "success": False, "error": "You can only have one session running at a time." }
     response = {}
 
     prompt_response = model.chat_completion(message)

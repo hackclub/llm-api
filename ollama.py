@@ -3,12 +3,16 @@ import requests
 from typing import List
 import json
 import time
-from sqlmodel import Session, select
+from sqlmodel import Session, select, and_
 from models import ChatSession, ChatRecord
 import statsd
 
 def get_time_millis():
     return round(time.time() * 1000)
+
+class SessionLimitExceeded(Exception):
+    def __init__(self):
+        super()
 
 class LLMAssistant:
     def __init__(self, metrics: statsd.StatsClient, user_email: str, session_id: str, pg_engine):
@@ -21,8 +25,12 @@ class LLMAssistant:
 
         with Session(self.pg_engine) as session:
             chat_session = session.exec(select(ChatSession).where(ChatSession.id == self.session_id)).first()
-
             if chat_session is None:
+                chat_sessions_by_user = session.exec(select(ChatSession).where(and_(ChatSession.has_ended == False, ChatSession.user_email == user_email))).all()
+
+                if len(chat_sessions_by_user) > 0:
+                    raise SessionLimitExceeded
+
                 self.metrics.incr("start_session")
                 # create a new chat session as it does not exist yet
                 chat_session = ChatSession(
