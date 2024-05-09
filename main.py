@@ -1,13 +1,14 @@
 from fastapi import FastAPI
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
-from ollama import ChatGPTAssistant, SessionLimitExceeded
-from models import ChatSession
+from ollama import ChatGPTAssistant, SessionLimitExceeded, get_time_millis
+from models import ChatSession, ChatRecord
 from dotenv import load_dotenv
 from sqlmodel import create_engine, SQLModel, Session, select, and_
 import statsd
 import os
 import time
+import datetime
 
 load_dotenv()
 
@@ -94,3 +95,25 @@ async def _end_chat_session(req: Request):
             session.commit()
     return { "success": True }
    
+
+@app.get("/end-stale-sessions")
+async def _end_stale_session():
+    with Session(pg_engine) as session:
+        running_sessions = session.exec(select(ChatSession).where(ChatSession.has_ended == False)).all()
+        for running_session in running_sessions:
+            now = get_time_millis() 
+            
+            records = session.exec(select(ChatRecord).where(ChatRecord.session_id == running_session.id).order_by(ChatRecord.timestamp)).all()
+
+            last_record_timestamp = records[-1].timestamp
+            minute = 1000 * 60
+            time_diff = (now - last_record_timestamp) / minute
+
+            # end all sessions that are older than 2 minutes
+            if time_diff >= 2:
+                chat_session = session.exec(select(ChatSession).where(ChatSession.id == running_session.id)).first()
+                chat_session.has_ended = True
+
+                session.add(chat_session)
+                session.commit()
+    return { "success": True }
