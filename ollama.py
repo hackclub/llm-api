@@ -14,6 +14,10 @@ class SessionLimitExceeded(Exception):
     def __init__(self):
         super().__init__()
 
+class SessionAlreadyExists(Exception):
+    def __init__(self):
+        super().__init__()
+
 class LLMAssistant:
     def __init__(self, metrics: statsd.StatsClient, user_email: str, session_id: str, pg_engine):
         self.metrics = metrics
@@ -24,7 +28,7 @@ class LLMAssistant:
         self.pg_engine = pg_engine
 
         with Session(self.pg_engine) as session:
-            chat_session = session.exec(select(ChatSession).where(and_(ChatSession.id == self.session_id, ChatSession.user_email == self.user_email))).first()
+            chat_session = session.exec(select(ChatSession).where(ChatSession.id == self.session_id)).first()
             if chat_session is None:
                 if self.has_existing_sessions(): raise SessionLimitExceeded
 
@@ -46,6 +50,7 @@ class LLMAssistant:
                 session.add(chat_record)
                 session.commit()
             else:
+                if not chat_session.user_email == self.user_email: raise SessionAlreadyExists
                 if chat_session.has_ended:
                     if not self.has_existing_sessions():
                         chat_session.has_ended = False
