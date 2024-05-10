@@ -46,7 +46,7 @@ class LLMAssistant:
                 session.add(chat_record)
                 session.commit()
             else:
-                chat_session = session.exec(select(ChatSession).where(ChatSession.id == self.session_id)).first()
+                chat_session = session.exec(select(ChatSession).where(and_(ChatSession.id == self.session_id, ChatSession.user_email == self.user_email))).first()
                 if chat_session is not None and chat_session.has_ended:
                     if not self.has_existing_sessions():
                         chat_session.has_ended = False
