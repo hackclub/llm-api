@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
-from ollama import ChatGPTAssistant, SessionLimitExceeded, get_time_millis
+from ollama import ChatGPTAssistant, SessionLimitExceeded, SessionAlreadyExists, get_time_millis
 from models import ChatSession, ChatRecord
 from dotenv import load_dotenv
 from sqlmodel import create_engine, SQLModel, Session, select, and_
@@ -62,6 +62,8 @@ async def _generate_response(req: Request):
         model = ChatGPTAssistant(metrics=metrics, user_email=user_email, session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
     except SessionLimitExceeded:
         return { "success": False, "error": "You can only have one session running at a time." }
+    except SessionAlreadyExists:
+        return { "success": False, "error": "This session already exists and is owned by another user." }
 
     response = {}
 
