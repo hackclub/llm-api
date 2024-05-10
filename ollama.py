@@ -12,7 +12,7 @@ def get_time_millis():
 
 class SessionLimitExceeded(Exception):
     def __init__(self):
-        super()
+        super().__init__()
 
 class LLMAssistant:
     def __init__(self, metrics: statsd.StatsClient, user_email: str, session_id: str, pg_engine):
@@ -26,10 +26,7 @@ class LLMAssistant:
         with Session(self.pg_engine) as session:
             chat_session = session.exec(select(ChatSession).where(ChatSession.id == self.session_id)).first()
             if chat_session is None:
-                chat_sessions_by_user = session.exec(select(ChatSession).where(and_(ChatSession.has_ended == False, ChatSession.user_email == user_email))).all()
-
-                if len(chat_sessions_by_user) > 0:
-                    raise SessionLimitExceeded
+                if self.has_existing_sessions(): raise SessionLimitExceeded
 
                 self.metrics.incr("start_session")
                 # create a new chat session as it does not exist yet
@@ -49,7 +46,24 @@ class LLMAssistant:
                 session.add(chat_record)
                 session.commit()
             else:
-                 self.metrics.incr("continue_session")
+                chat_session = session.exec(select(ChatSession).where(ChatSession.id == self.session_id)).first()
+                if chat_session is not None and chat_session.has_ended:
+                    if not self.has_existing_sessions():
+                        chat_session.has_ended = False
+
+                        # update the status of the session in the database
+                        session.add(chat_session)
+                        session.commit()
+                    else:
+                        raise SessionLimitExceeded
+                self.metrics.incr("continue_session")
+
+    # use this method to raise a SessionLimitExceeded error if the current user has more than a single running session
+    def has_existing_sessions(self):
+        with Session(self.pg_engine) as session:
+            chat_sessions_by_user = session.exec(select(ChatSession).where(and_(ChatSession.has_ended == False, ChatSession.user_email == self.user_email))).all()
+
+            return len(chat_sessions_by_user) > 0
 
     @staticmethod
     def build_code_prompt(self, code: str, error_logs: str = ""):

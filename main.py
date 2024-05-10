@@ -58,13 +58,11 @@ async def _generate_response(req: Request):
     with Session(pg_engine) as session:
         chat_session = session.exec(select(ChatSession).where(ChatSession.id == session_id)).first()
 
-    if chat_session is not None and chat_session.has_ended:
-        return { "success": False, "msg": "Session has ended" }
-
     try:
         model = ChatGPTAssistant(metrics=metrics, user_email=user_email, session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
     except SessionLimitExceeded:
         return { "success": False, "error": "You can only have one session running at a time." }
+
     response = {}
 
     prompt_response = model.chat_completion(message)
@@ -103,6 +101,7 @@ async def _end_stale_session():
         for running_session in running_sessions:
             now = get_time_millis() 
             
+            # get all chat records for the current session id
             records = session.exec(select(ChatRecord).where(ChatRecord.session_id == running_session.id).order_by(ChatRecord.timestamp)).all()
 
             last_record_timestamp = records[-1].timestamp
