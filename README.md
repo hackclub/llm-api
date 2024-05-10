@@ -59,7 +59,7 @@ By default, the API keeps a history of the requests sent to it so you don't have
 By default, `localhost:3000` is an authorized origin in teh LLM API
 
 If you want to allow a URL authorized, add the URL to `allow_origins` in the CORS middleware
-```
+```diff python
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -67,7 +67,7 @@ app.add_middleware(
         "http://localhost:3000",
         "https://sprig-git-sprig-ai.hackclub.dev",
         "https://sprig.hackclub.com",
-        "https://your-new-url.com"
++       "https://your-new-url.com"
     ],
 ```
 
