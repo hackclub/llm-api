@@ -4,7 +4,7 @@ from typing import List
 import json
 import time
 from sqlmodel import Session, select, and_
-from models import ChatSession, ChatRecord
+from api.models import ChatSession, ChatRecord
 import statsd
 
 def get_time_millis():
