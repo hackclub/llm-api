@@ -61,8 +61,10 @@ async def _generate_response(req: Request):
     try:
         model = ChatGPTAssistant(metrics=metrics, user_email=user_email, session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
     except SessionLimitExceeded:
+        metrics.incr("session_limit_exceeded")
         return { "success": False, "error": "You can only have one session running at a time." }
     except SessionAlreadyExists:
+        metrics.incr("session_exists")
         return { "success": False, "error": "This session already exists and is owned by another user." }
 
     response = {}
@@ -93,6 +95,7 @@ async def _end_chat_session(req: Request):
 
             session.add(chat_session)
             session.commit()
+    metrics.incr("end_session")
     return { "success": True }
    
 
@@ -117,4 +120,5 @@ async def _end_stale_session():
 
                 session.add(chat_session)
                 session.commit()
+    metrics.incr("end_stale_sessions")
     return { "success": True }
