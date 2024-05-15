@@ -123,7 +123,7 @@ class LLMAssistant:
         return ""
 
     def chat_completion(self, message: str):
-        messages = self.load_previous_messages() 
+        messages = self.load_previous_messages()
 
         completion = self.get_completion(messages + [{
             "role": "user",
@@ -147,7 +147,7 @@ class LLMAssistant:
         self.save_messages(new_messages)
 
         return completion_message
-    
+
     def load_previous_messages(self):
         messages = []
         with Session(self.pg_engine) as session:
@@ -181,15 +181,14 @@ class ChatGPTAssistant(LLMAssistant):
         self.model_version = model
 
     def get_completion(self, messages):
-        # print("open ai client", self.openai_client)
         try:
             response = self.openai_client.chat.completions.create(
                 model=self.model_version, messages=messages
             )
 
-            result = { 
+            result = {
                 "message": response.choices.pop().message.content,
-                "prompt_tokens": response.usage.prompt_tokens, 
+                "prompt_tokens": response.usage.prompt_tokens,
                 "completion_tokens": response.usage.completion_tokens,
                 "total_tokens": response.usage.total_tokens
             }
@@ -197,7 +196,7 @@ class ChatGPTAssistant(LLMAssistant):
             self.metrics.incr("success.generate_response")
             return result
         except:
-            self.metrics.incr("errors.generate_response") 
+            self.metrics.incr("errors.generate_response")
 
 
 class OllamaAssitantModel(LLMAssistant):
@@ -255,7 +254,7 @@ class OllamaAssitantModel(LLMAssistant):
 
             # the last item in a ollama response is the response summary including token count, duration etc
             response_summary = json.loads(responses[-1])
-            token_counts = { 
+            token_counts = {
                 "prompt_tokens": response_summary.get("eval_count"),
                 "completion_tokens": response_summary.get("prompt_eval_count"),
                 "total_tokens": response_summary.get("eval_count") + response_summary.get("prompt_eval_count")
