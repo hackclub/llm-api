@@ -1,8 +1,8 @@
 from fastapi import FastAPI, status, Response
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
-from api.ollama import ChatGPTAssistant, SessionLimitExceeded, SessionAlreadyExists, get_time_millis
-from api.models import ChatSession, ChatRecord
+from ollama import ChatGPTAssistant, SessionLimitExceeded, SessionAlreadyExists, get_time_millis
+from models import ChatSession, ChatRecord
 from dotenv import load_dotenv
 from sqlmodel import create_engine, SQLModel, Session, select, and_
 import statsd
