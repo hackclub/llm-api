@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, status, Response
 from fastapi.requests import Request
 from fastapi.middleware.cors import CORSMiddleware
 from api.ollama import ChatGPTAssistant, SessionLimitExceeded, SessionAlreadyExists, get_time_millis
@@ -44,16 +44,26 @@ def _hello_world():
     return "Hello World"
 
 @app.post("/generate")
-async def _generate_response(req: Request):
+async def _generate_response(req: Request, response: Response):
     metrics.incr("generate")
 
     # time it starts handing a request
     start_time = time.time()
     body = await req.json()
 
-    user_email = body.get("email")
-    session_id = body.get("session_id")
-    message = body.get("message")
+    user_email = body.get("email", None)
+    session_id = body.get("session_id", None)
+    message = body.get("message", None)
+
+    if user_email is None or session_id is None or message is None:
+        response.status_code = status.HTTP_400_BAD_REQUEST
+        return {
+            "success": False,
+            "error":
+            f"{user_email} is not a valid email" if user_email is None else ""      +
+            f"{session_id} is not a valid session_id" if session_id is None else "" +
+            f"{message} is not a valid message" if message is None else ""
+        }
 
     with Session(pg_engine) as session:
         chat_session = session.exec(select(ChatSession).where(ChatSession.id == session_id)).first()
@@ -62,9 +72,11 @@ async def _generate_response(req: Request):
         model = ChatGPTAssistant(metrics=metrics, user_email=user_email, session_id=session_id, pg_engine=pg_engine, openai_api_key=OPENAI_API_KEY)
     except SessionLimitExceeded:
         metrics.incr("session_limit_exceeded")
+        response.status_code = status.HTTP_429_TOO_MANY_REQUESTS
         return { "success": False, "error": "You can only have one session running at a time." }
     except SessionAlreadyExists:
         metrics.incr("session_exists")
+        response.status_code = status.HTTP_401_UNAUTHORIZED
         return { "success": False, "error": "This session already exists and is owned by another user." }
 
     response = {}
@@ -97,15 +109,14 @@ async def _end_chat_session(req: Request):
             session.commit()
     metrics.incr("end_session")
     return { "success": True }
-   
 
 @app.get("/end-stale-sessions")
 async def _end_stale_session():
     with Session(pg_engine) as session:
         running_sessions = session.exec(select(ChatSession).where(ChatSession.has_ended == False)).all()
         for running_session in running_sessions:
-            now = get_time_millis() 
-            
+            now = get_time_millis()
+
             # get all chat records for the current session id
             records = session.exec(select(ChatRecord).where(ChatRecord.session_id == running_session.id).order_by(ChatRecord.timestamp)).all()
 
