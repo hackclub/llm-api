@@ -1,0 +1,11 @@
+services:
+  api:
+    build: 
+      dockerfile: Dockerfile
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GRAPHITE_HOST=${GRAPHITE_HOST}
+      - GRAPHITE_HOST_PORT=${GRAPHITE_HOST_PORT}
+      - PG_DATABASE_URL=${PG_DATABASE_URL}
+    ports:
+      - "8981:8000"
