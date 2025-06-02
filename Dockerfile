@@ -1,20 +1,20 @@
-FROM ubuntu:22.04
+# Use an official Python runtime as a parent image
+FROM python:3.9-slim
 
-RUN apt-get update
-
-# install the python runtime and pip
-
-RUN apt-get install -y python3 python3-pip libpq-dev --fix-missing
-# END install python runtime
-
+# Set the working directory in the container
 WORKDIR /app
 
-COPY requirements.txt . 
+# Copy the requirements file into the container
+COPY requirements.txt .
 
-RUN pip3 install -r requirements.txt
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
+# Copy the rest of the application code into the container
 COPY . .
 
+# Expose the port that FastAPI will run on (default is 8000)
 EXPOSE 8000
 
-CMD ["uvicorn", "main:app", "--reload", "--host", "0.0.0.0"]
+# Command to run the FastAPI application using Uvicorn
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
