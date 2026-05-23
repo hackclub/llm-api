@@ -56,7 +56,7 @@ The API will return a reponse containing the raw output from the model and a pro
 By default, the API keeps a history of the requests sent to it so you don't have to worry about sending a list of the previous messages.
 
 ## CORS 
-By default, `localhost:3000` is an authorized origin in teh LLM API
+By default, `localhost:3000` is an authorized origin in the LLM API
 
 If you want to allow a URL authorized, add the URL to `allow_origins` in the CORS middleware
 ```diff python
